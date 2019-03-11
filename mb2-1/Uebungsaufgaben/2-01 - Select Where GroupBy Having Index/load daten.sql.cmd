@@ -1,0 +1,1 @@
+time /T && "C:\Program Files\MySQL\MySQL Server 5.7\bin\bin\mysql.exe" -uroot -p < "Daten.sql" && time /T
