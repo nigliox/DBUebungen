@@ -1,0 +1,117 @@
+use transaktiondb;
+
+# 2. Aufgabe
+set autocommit = 0;
+
+# 3. Aufgabe
+insert into kategorie (bezeichnung) values ('Mobile');
+insert into produkt (bezeichnung, kategorieid_fk) values ('Samsung Galaxy S4', LAST_INSERT_ID());
+commit;
+
+-- select * from kategorie;
+-- select * from produkt;
+
+# 4. Aufgabe
+
+#Console:   select * from kategorie where kategorieid = 1;
+#Workbench: select * from kategorie where kategorieid = 1;
+#Workbench: start transaction;
+#Workbench: update kategorie set bezeichnung = 'Natel' where kategorieid = 1;
+#Console:   start transaction;
+#Console:   update kategorie set bezeichnung = 'Handy' where kategorieid = 1;
+#Workbench: commit;
+#Console:   commit;
+
+#Workbench: select * from kategorie
+#Console:   select * from kategorie
+
+# => Es wird Handy angezeigt - d.h. der Update auf 'Natel' vom Benutzer 
+#    'Workbench' ist verloren gegangen
+# => = LostUpdate
+
+
+# 5. Aufgabe
+
+#Console:   set session transaction isolation level read uncommitted;
+#Workbench: set session transaction isolation level read uncommitted;
+#Console:   select * from kategorie where kategorieid = 1;
+#Console:   start transaction;
+#Console:   update kategorie set bezeichnung = 'Tragbare Telefonzelle' where kategorieid = 1;
+#Workbench: select * from kategorie where kategorieid = 1;
+#Console:   rollback;
+
+#Workbench: select * from kategorie
+#Console:   select * from kategorie
+
+# => Der Benutzer 'Workbench' liest 'Tragbare Telefonzelle', obwohl
+#    die Änderung vom Benutzer 'Console' noch nicht committed wurde
+#    und danach sogar rückgängig gemacht wird.
+
+
+# 6. Aufgabe
+
+#Console:   start transaction;
+#Console:   insert into kategorie(kategorieid, bezeichnung) values (100, 'Test - READ COMMITTED');
+#Workbench: set session transaction isolation level read committed;
+#Workbench: select * from kategorie;
+#Console:   commit;
+#Workbench: select * from kategorie;
+
+# => Der erste select vom Benutzer 'Workbench' gibt nur einen Datensatz
+#    zurück. Der neu eingefügte Datensatz des Benutzers 'Console' wird 
+#    nicht zurückgegeben, da der Benutzer 'Workbench' nur committede 
+#    Daten liest.
+
+
+# 7. Aufgabe
+
+#Console:   start transaction;
+#Console:   insert into kategorie(kategorieid, bezeichnung) values (101, 'Test - READ UNCOMMITTED');
+#Workbench: set session transaction isolation level read uncommitted;
+#Workbench: select * from kategorie;
+#Console:   commit;
+#Workbench: select * from kategorie;
+
+# => Der erste select vom Benutzer 'Workbench' gibt nun auch den neu
+#    eingefügten Datensatz zurück obwohl dieser noch nicht committed
+#    wurde.
+
+
+# 8. Aufgabe
+
+#Console:   start transaction;
+#Workbench: set session transaction isolation level repeatable read;
+#Workbench: start transaction;
+#Workbench: select * from kategorie where kategorieid = 1;
+#Console:   select * from kategorie where kategorieid = 1;
+#Console:   update kategorie set bezeichnung = 'Smartphone' where kategorieid = 1;
+#Console:   commit;
+#Workbench: select * from kategorie where kategorieid = 1;
+#Console:   select * from kategorie where kategorieid = 1;
+#Workbench: commit;
+#Workbench: select * from kategorie where kategorieid = 1;
+
+# => Nachdem der Benutzer 'Console' die Änderung committed hat, wird
+#    beim Benutzer 'Workbench' immer noch der alte Wert gelesen.
+#    Erst nachdem die Transaktion des Benutzers 'Workbench' abgeschlossen
+#    worden ist, wird auch beim den Benutzer 'Workbench' der neue
+#    Wert 'Smartphone' gelesen.
+
+
+# 9. Aufgabe
+
+#Console:   set innodb_lock_wait_timeout = 5;
+#Console:   start transaction;
+#Workbench: set session transaction isolation level serializable;
+#Workbench: start transaction;
+#Workbench: select count(*) from produkt;
+#Console:   select count(*) from produkt;
+#Console:   update kategorie set bezeichnung = 'Smartphone' where kategorieid = 1;
+#Workbench: insert into produkt(produktid, bezeichnung, kategorieid_fk) values (201, 'iPhone 8z', 1);
+
+
+# => Beim Versuch des insert durch den Benutzer 'Workbench' tritt nun ein Lock mit einem Timeout auf, 
+#    da die Tabelle produkt vom Benutzer 'Workbench' durch den isolationlevel serializable sowie
+#    den select gesperrt wurde.
+#    Wird von Benutzer 'Workbench' und Benutzer 'Console' ein Insert ausgeführt, tritt sogar ein
+#    Deadlock auf, der von MySQL erkannt wird.
