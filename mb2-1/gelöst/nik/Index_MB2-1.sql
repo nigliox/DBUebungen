@@ -12,3 +12,4 @@ ON kunde (name, vorname)
 drop index if exists idx_ort 
 ON kunde;
 
+show index from kunde;
